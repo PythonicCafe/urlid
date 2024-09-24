@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>URLid: A Universal Method for Dataset Reconciliation</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.1/normalize.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: #f4f4f9;
+            margin: 0;
+            padding: 0;
+        }
+        header {
+            background-color: #0066cc;
+            color: #fff;
+            padding: 1rem;
+            text-align: center;
+        }
+        header h1 {
+            margin: 0;
+            font-size: 2rem;
+        }
+        main {
+            max-width: 960px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+        }
+        section {
+            margin-bottom: 2rem;
+        }
+        section h2 {
+            font-size: 1.5rem;
+            color: #0066cc;
+            border-bottom: 2px solid #0066cc;
+            padding-bottom: 0.5rem;
+            margin-bottom: 1rem;
+        }
+        p, code {
+            font-size: 1rem;
+            line-height: 1.6;
+            color: #333;
+        }
+        pre {
+            background-color: #e8e8e8;
+            padding: 1rem;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+        footer {
+            text-align: center;
+            padding: 2rem 0;
+            background-color: #333;
+            color: #fff;
+        }
+        footer a {
+            color: #fff;
+            text-decoration: none;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>URLid Methodology</h1>
+        <p>A universal identifier system for data reconciliation</p>
+    </header>
+
+    <main>
+        <section>
+            <h2>What is URLid?</h2>
+            <p>URLid is a methodology created by <a href="https://github.com/turicas" target="_blank">Álvaro Justen (Turicas)</a> from <a href="https://pythonic.cafe/" target="_blank">Pythonic Café</a> to facilitate the creation of universal identifiers for entities across different datasets. It was developed <a href="https://github.com/turicas/brasil.io/issues/182" target="_blank">to address the challenges of cross-referencing public data from various sources in Brazil</a>, but it can be applied to any data reconciliation scenario. This type of methodology helps systems interconnect more easily and enables the creation of powerful data structures such as graph databases, facilitating complex data analysis and relationships across diverse datasets.</p>
+            <p>The core idea of URLid is to generate a unique, consistent identifier for each object of an entity (such as a specific person, a particular company, or an individual candidacy) using a combination of available data. This method produces identifiers of the same data type (UUID) regardless of the entity type, without relying on a central database or expensive JOINs.</p>
+            <p>For a detailed explanation of the methodology (in Portuguese), you can watch the conference talk: <a href="https://www.youtube.com/watch?v=sb0-ACDdmKw" target="_blank">Conciliação de datasets públicos com URLid (PGConfBrasil 2022)</a>.</p>
+        </section>
+
+        <section>
+            <h2>How it Works</h2>
+            <ol>
+                <li>Define a base URL as your namespace (e.g., <code>https://id.brasil.io/</code>)</li>
+                <li>Create a slug for the entity type (e.g., <code>person</code> for individuals)</li>
+                <li>Define a method to create a Raw ID from available data; this can be a combination of various fields available in the databases</li>
+                <li>Generate a URL combining the namespace, entity type, version, and Raw ID</li>
+                <li>Pass the URL through the <a href="https://en.wikipedia.org/wiki/Universally_unique_identifier#Versions_3_and_5_(namespace_name-based)" target="_blank">UUID version 5</a> algorithm to generate the final identifier</li>
+            </ol>
+        </section>
+
+        <section>
+            <h2>Understanding Raw IDs</h2>
+            <p>Before we dive into Raw IDs, let's clarify two important terms:</p>
+            <ul>
+                <li><strong>Entity:</strong> a category or type of thing (e.g., person, company, vehicle)</li>
+                <li><strong>Object:</strong> a specific instance of an entity (e.g., John Doe, Acme Inc., a particular car)</li>
+            </ul>
+            <p>A Raw ID is a unique string that identifies a specific object within an entity type. It's a crucial component of the URLid methodology and forms the basis for generating the final UUID. Here are some key points about Raw IDs:</p>
+            <ul>
+                <li>Raw IDs must be unique within their entity type, but not necessarily across different entities (e.g., a person and a company could both have "123456" as their Raw ID).</li>
+                <li>Raw IDs can vary significantly in format and length between different entity types.</li>
+            </ul>
+            <p>Here are some examples of Raw IDs for different entity types:</p>
+            <ul>
+                <li><strong>Person:</strong> "456789-JOHN-DOE" (combination of partial ID number and name)</li>
+                <li><strong>Company:</strong> "12345678" (first 8 digits of registration number)</li>
+                <li><strong>Electoral Candidate:</strong> "2020-123456" (election year and candidate number)</li>
+                <li><strong>Vehicle:</strong> "ABC1D23" (license plate number)</li>
+            </ul>
+            <p>This diversity in Raw ID formats presents a challenge when trying to cross-reference different types of entities. That's where the URLid methodology comes in - it provides a universal method to create consistent identifiers across all entity types, regardless of their original Raw ID format.</p>
+        </section>
+
+        <section>
+            <h2>Examples</h2>
+            <h3>Python Example</h3>
+            <pre><code>
+import uuid
+
+def person_urlid(id_number, name):
+    """Generates URLid based on partial Brazilian CPF identification number and name"""
+    # Using last 6 digits of the identification number
+    clean_id = id_number.replace(".", "").replace("-", "")
+    assert len(clean_id) == 11
+    id_part = clean_id[3:9]
+    name_slug = name.upper().replace(" ", "-")
+    raw_id = f"{id_part}-{name_slug}"
+    url = f"https://id.brasil.io/person/v1/{raw_id}/"
+    return uuid.uuid5(uuid.NAMESPACE_URL, url)
+
+def company_urlid(registration_number):
+    """Generates URLid based on core Brazilian CNPJ identification number"""
+    # Using first 8 digits of the company registration number
+    clean_id = registration_number.replace(".", "").replace("/", "").replace("-", "")
+    assert len(clean_id) == 14
+    raw_id = clean_id[:8]
+    url = f"https://id.brasil.io/company/v1/{raw_id}/"
+    return uuid.uuid5(uuid.NAMESPACE_URL, url)
+
+# Usage
+print(person_urlid("12345678901", "John Doe"))  # a575a1af-54f4-534a-b781-a78a0e2f48d7
+print(company_urlid("12.345.678/0001-99"))  # d20b15d2-25e6-5908-8064-835f700e21a7
+            </code></pre>
+
+
+            <h3>PostgreSQL Implementation</h3>
+            <pre><code>
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
+CREATE OR REPLACE FUNCTION urlid(base_url TEXT, entity TEXT, version TEXT, raw_id TEXT)
+RETURNS UUID AS $$
+BEGIN
+  RETURN uuid_generate_v5(
+    uuid_ns_url(),
+    base_url || '/' || entity || '/' || version || '/' || raw_id || '/'
+  );
+END;
+$$ LANGUAGE plpgsql IMMUTABLE;
+
+-- Usage example:
+SELECT urlid('https://id.brasil.io', 'person', 'v1', '456789-JOHN-DOE'); -- a575a1af-54f4-534a-b781-a78a0e2f48d7
+SELECT urlid('https://id.brasil.io', 'company', 'v1', '12345678'); -- d20b15d2-25e6-5908-8064-835f700e21a7
+            </code></pre>
+        </section>
+
+       <section>
+         <h2>Flexibility of URLid</h2>
+         <p>It's important to note that URLid is a methodology, not a rigid system tied to specific entities or implementations. While we've provided examples based on entities used in <a href="https://brasil.io/" target="_blank">Brasil.IO</a> (such as persons, companies, and electoral candidates), these are merely illustrative. You're free to define and use any entities that suit your specific needs or domain.</p>
+         <p>A key aspect of URLid's flexibility lies in its use of URLs as a mechanism for generating unique
+         identifiers. It's crucial to understand that these URLs don't need to actually exist or resolve to web pages;
+         they serve purely as a framework for identifier creation. The hierarchical nature of URLs ensures that, when
+         using the same base URL, collisions within the same entity type are impossible. While you can use any domain
+         in your URLs, it's recommended to base them on domains you own or control. This practice not only guarantees
+         uniqueness but also opens up exciting future possibilities. For instance, we could potentially implement ways
+         to serve these objects via the Web, transforming these virtual URLs into actual endpoints that provide entity information. This could lead to the creation of a distributed, interlinked system of entity data, significantly enhancing the power and utility of the URLid methodology. By thinking ahead in this way, we're not just solving current data reconciliation challenges, but also laying the groundwork for more advanced, interconnected data systems in the future.</p>
+         <p>The power of URLid lies in its flexibility: as long as you follow the core principles of the methodology - defining a base URL, creating entity slugs, and generating raw IDs - you can apply URLid to any set of entities you choose. This makes URLid adaptable for use in various contexts, whether for internal systems within an organization or for data exchange between different parties. The key is consistency in applying the method, which ensures that the resulting UUIDs will be unique and reproducible across systems that agree on the same URLid implementation.</p>
+       </section>
+
+       <section>
+         <h2>References</h2>
+            <ul>
+                <li>
+                  <a href="https://datatracker.ietf.org/doc/html/rfc4122" target="_blank">RFC4122: A Universally Unique Identifier (UUID) URN Namespace</a>
+            </li>
+            </ul>
+       </section>
+
+    </main>
+
+    <footer>
+        <p>
+          © 2018-2024 URLid Methodology.
+          Created by <a href="https://github.com/turicas" target="_blank">Álvaro Justen (Turicas)</a> at <a href="https://pythonic.cafe/" target="_blank">Pythonic Café</a>.
+          <a href="https://github.com/PythonicCafe/urlid" target="_blank"><i class="fab fa-github"></i> Contribute on GitHub</a>
+        </p>
+    </footer>
+</body>
+</html>
